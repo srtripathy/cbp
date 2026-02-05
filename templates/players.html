@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ club_name }} - Players</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="topbar">
+        <div>
+          <h1>{{ club_name }}</h1>
+          <p class="subtitle">Manage players</p>
+        </div>
+        <div class="topbar-actions">
+          <a class="link" href="{{ url_for('index') }}">Back to week</a>
+          <a class="link" href="{{ url_for('logout') }}">Logout</a>
+        </div>
+      </header>
+
+      <section class="card">
+        <p class="note">
+          Update the player list below (one name per line). Saving will reset all weekly checkmarks.
+        </p>
+        <form method="post" class="stack">
+          <label>
+            Player list
+            <textarea name="players" rows="14" required>{{ players_text }}</textarea>
+          </label>
+          <button type="submit" class="primary">Save Players</button>
+        </form>
+      </section>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ club_name }} - Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+  </head>
+  <body>
+    <div class="container narrow">
+      <header class="topbar">
+        <div>
+          <h1>{{ club_name }}</h1>
+          <p class="subtitle">Admin login</p>
+        </div>
+      </header>
+
+      <section class="card">
+        {% if error %}
+          <div class="alert">{{ error }}</div>
+        {% endif %}
+        <form method="post" class="stack">
+          <label>
+            Username
+            <input type="text" name="username" required />
+          </label>
+          <label>
+            Password
+            <input type="password" name="password" required />
+          </label>
+          <button type="submit" class="primary">Sign in</button>
+        </form>
+      </section>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ club_name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="topbar">
+        <div>
+          <h1>{{ club_name }}</h1>
+          <p class="subtitle">Week of {{ week['week_date'] }}</p>
+        </div>
+        <div class="topbar-actions">
+          <form method="post" action="{{ url_for('create_week') }}" class="inline-form">
+            <input type="date" name="week_date" value="{{ week['week_date'] }}" required />
+            <button type="submit" class="primary">New Week</button>
+          </form>
+          <form method="get" action="/" class="inline-form">
+            <select name="week" onchange="window.location=this.value">
+              {% for w in weeks %}
+                <option value="{{ url_for('week_view', week_id=w['id']) }}" {% if w['id'] == week['id'] %}selected{% endif %}>
+                  {{ w['week_date'] }}
+                </option>
+              {% endfor %}
+            </select>
+          </form>
+          <a class="link" href="{{ url_for('players') }}">Players</a>
+          <a class="link" href="{{ url_for('logout') }}">Logout</a>
+        </div>
+      </header>
+
+      <section class="card">
+        <div class="table-wrap">
+          <table class="sheet">
+            <thead>
+              <tr>
+                <th>Player</th>
+                {% for game in games %}
+                  <th>G{{ game }}</th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for player in players %}
+                <tr>
+                  <td class="player-name">{{ player['name'] }}</td>
+                  {% for game in games %}
+                    {% set played = played_map.get((player['id'], game), 0) %}
+                    <td>
+                      <button
+                        class="toggle {{ 'on' if played else 'off' }}"
+                        data-week="{{ week['id'] }}"
+                        data-player="{{ player['id'] }}"
+                        data-game="{{ game }}"
+                        aria-label="Toggle {{ player['name'] }} for game {{ game }}"
+                      >
+                        {{ '✓' if played else '' }}
+                      </button>
+                    </td>
+                  {% endfor %}
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <p>Tap a box to mark a player as having played a game.</p>
+      </footer>
+    </div>
+
+    <script>
+      document.querySelectorAll(".toggle").forEach((btn) => {
+        btn.addEventListener("click", async (event) => {
+          event.preventDefault();
+          const weekId = btn.dataset.week;
+          const playerId = btn.dataset.player;
+          const gameNo = btn.dataset.game;
+
+          const res = await fetch("{{ url_for('toggle') }}", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              week_id: weekId,
+              player_id: playerId,
+              game_no: gameNo,
+            }),
+          });
+
+          if (!res.ok) return;
+          const data = await res.json();
+          if (data.ok) {
+            if (data.played === 1) {
+              btn.classList.remove("off");
+              btn.classList.add("on");
+              btn.textContent = "✓";
+            } else {
+              btn.classList.remove("on");
+              btn.classList.add("off");
+              btn.textContent = "";
+            }
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
