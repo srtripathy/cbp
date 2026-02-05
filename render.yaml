@@ -6,3 +6,10 @@ services:
     buildCommand: "pip install -r requirements.txt"
     startCommand: "gunicorn app:app"
     autoDeploy: true
+    disk:
+      name: badminton-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: SQLITE_PATH
+        value: /var/data/badminton.db

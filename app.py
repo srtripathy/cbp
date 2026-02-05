@@ -75,7 +75,11 @@ week_player_games_table = Table(
 def build_engine():
     db_url = os.environ.get("DATABASE_URL")
     if not db_url:
-        db_path = APP_DIR / "badminton.db"
+        sqlite_path = os.environ.get("SQLITE_PATH")
+        if sqlite_path:
+            db_path = Path(sqlite_path)
+        else:
+            db_path = APP_DIR / "badminton.db"
         return create_engine(
             f"sqlite:///{db_path}",
             connect_args={"check_same_thread": False},
