@@ -5,4 +5,4 @@ About 16 games could be played every Wednesday.
 The sheet is created at the start of the games and updated as games are played. 
 
 An admin person will handle this app preferably on a mobile phone using a URL so the app is hosted
-on the Render platform. The URL is cbp-1xma.onrender.com
+on the Render platform.
