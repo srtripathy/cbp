@@ -245,6 +245,10 @@ def week_view(week_id: int):
         ).fetchall()
 
     played_map = {(r[0], r[1]): r[2] for r in rows}
+    player_totals: Dict[int, int] = {int(p["id"]): 0 for p in players}
+    for player_id, _game_no, played in rows:
+        if played:
+            player_totals[int(player_id)] += 1
     weeks = get_weeks()
 
     return render_template(
@@ -255,6 +259,7 @@ def week_view(week_id: int):
         players=players,
         games=range(1, GAMES_PER_WEEK + 1),
         played_map=played_map,
+        player_totals=player_totals,
     )
 
 

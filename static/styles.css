@@ -102,6 +102,12 @@ body {
   white-space: nowrap;
 }
 
+.player-total {
+  font-weight: 700;
+  background: #f7fbf9;
+  min-width: 52px;
+}
+
 .toggle {
   width: 34px;
   height: 34px;

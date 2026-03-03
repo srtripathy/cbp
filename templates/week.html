@@ -38,6 +38,7 @@
             <thead>
               <tr>
                 <th>Player</th>
+                <th>Total</th>
                 {% for game in games %}
                   <th>G{{ game }}</th>
                 {% endfor %}
@@ -47,6 +48,9 @@
               {% for player in players %}
                 <tr>
                   <td class="player-name">{{ player['name'] }}</td>
+                  <td class="player-total" id="total-{{ player['id'] }}">
+                    {{ player_totals.get(player['id'], 0) }}
+                  </td>
                   {% for game in games %}
                     {% set played = played_map.get((player['id'], game), 0) %}
                     <td>
@@ -80,6 +84,7 @@
           const weekId = btn.dataset.week;
           const playerId = btn.dataset.player;
           const gameNo = btn.dataset.game;
+          const totalCell = document.getElementById(`total-${playerId}`);
 
           const res = await fetch("{{ url_for('toggle') }}", {
             method: "POST",
@@ -98,10 +103,18 @@
               btn.classList.remove("off");
               btn.classList.add("on");
               btn.textContent = "✓";
+              if (totalCell) {
+                const next = Number(totalCell.textContent || "0") + 1;
+                totalCell.textContent = String(next);
+              }
             } else {
               btn.classList.remove("on");
               btn.classList.add("off");
               btn.textContent = "";
+              if (totalCell) {
+                const next = Math.max(0, Number(totalCell.textContent || "0") - 1);
+                totalCell.textContent = String(next);
+              }
             }
           }
         });
