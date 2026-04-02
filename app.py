@@ -4,7 +4,7 @@ import os
 from datetime import date, datetime
 from functools import wraps
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from flask import (
     Flask,
@@ -224,7 +224,7 @@ def replace_next_up_for_week(week_id: int, player_ids: List[int]) -> None:
             )
 
 
-def next_game_number(rows: List[Tuple[int, int, bool]]) -> int | None:
+def next_game_number(rows: List[Tuple[int, int, bool]]) -> Optional[int]:
     game_counts: Dict[int, int] = {game_no: 0 for game_no in range(1, GAMES_PER_WEEK + 1)}
     for _player_id, game_no, played in rows:
         if played:
@@ -420,7 +420,7 @@ def next_up(week_id: int):
     else:
         current_players = suggested_players
 
-    current_slots: List[Dict[str, Any] | None] = list(current_players[:4])
+    current_slots: List[Optional[Dict[str, Any]]] = list(current_players[:4])
     while len(current_slots) < 4:
         current_slots.append(None)
 
