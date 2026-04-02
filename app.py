@@ -224,6 +224,40 @@ def replace_next_up_for_week(week_id: int, player_ids: List[int]) -> None:
             )
 
 
+def next_game_number(rows: List[Tuple[int, int, bool]]) -> int | None:
+    game_counts: Dict[int, int] = {game_no: 0 for game_no in range(1, GAMES_PER_WEEK + 1)}
+    for _player_id, game_no, played in rows:
+        if played:
+            game_counts[int(game_no)] += 1
+
+    for game_no in range(1, GAMES_PER_WEEK + 1):
+        if game_counts[game_no] < PLAYERS_PER_GAME:
+            return game_no
+    return None
+
+
+def apply_next_up_to_game(week_id: int, game_no: int, player_ids: List[int]) -> None:
+    with engine.begin() as conn:
+        conn.execute(
+            update(week_player_games_table)
+            .where(
+                (week_player_games_table.c.week_id == week_id)
+                & (week_player_games_table.c.game_no == game_no)
+            )
+            .values(played=False)
+        )
+        if player_ids:
+            conn.execute(
+                update(week_player_games_table)
+                .where(
+                    (week_player_games_table.c.week_id == week_id)
+                    & (week_player_games_table.c.game_no == game_no)
+                    & (week_player_games_table.c.player_id.in_(player_ids))
+                )
+                .values(played=True)
+            )
+
+
 
 def login_required(fn):
     @wraps(fn)
@@ -352,6 +386,7 @@ def next_up(week_id: int):
     player_totals = build_player_totals(game_rows, players)
     suggested_players = suggested_next_up(players, player_totals)
     player_by_id = {int(player["id"]): player for player in players}
+    next_game = next_game_number(game_rows)
 
     if request.method == "POST":
         action = request.form.get("action", "save")
@@ -373,6 +408,10 @@ def next_up(week_id: int):
             selected_ids.append(player_id)
 
         replace_next_up_for_week(week_id, selected_ids)
+        if action == "apply_and_back":
+            if next_game is not None:
+                apply_next_up_to_game(week_id, next_game, selected_ids)
+            return redirect(url_for("week_view", week_id=week_id))
         return redirect(url_for("next_up", week_id=week_id))
 
     saved_ids = saved_next_up_for_week(week_id)
@@ -395,6 +434,7 @@ def next_up(week_id: int):
         player_totals=player_totals,
         suggested_players=suggested_players,
         current_slots=current_slots,
+        next_game=next_game,
     )
 
 

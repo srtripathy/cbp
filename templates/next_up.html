@@ -14,7 +14,6 @@
           <p class="subtitle">Next 4 for week of {{ week['week_date'] }}</p>
         </div>
         <div class="topbar-actions">
-          <a class="link" href="{{ url_for('week_view', week_id=week['id']) }}">Back to week</a>
           <a class="link" href="{{ url_for('players') }}">Players</a>
           <a class="link" href="{{ url_for('logout') }}">Logout</a>
         </div>
@@ -25,6 +24,11 @@
           When more than 4 players are available, we suggest the 4 with the fewest games played so far this week.
           You can edit the current list below and save it.
         </p>
+        {% if next_game %}
+          <p class="note">Back to week will place this list into game G{{ next_game }}.</p>
+        {% else %}
+          <p class="note">All 16 games are already full, so back to week will not add a new game lineup.</p>
+        {% endif %}
 
         <div class="next-up-panels">
           <div class="panel">
@@ -46,6 +50,7 @@
               {% endfor %}
               <div class="actions-row">
                 <button type="submit" class="primary">Save Next 4</button>
+                <button type="submit" class="primary" name="action" value="apply_and_back">Back to week</button>
                 <button type="submit" class="secondary" name="action" value="reset">Use Suggested List</button>
               </div>
             </form>
