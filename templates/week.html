@@ -18,15 +18,6 @@
             <input type="date" name="week_date" value="{{ week['week_date'] }}" required />
             <button type="submit" class="primary">New Week</button>
           </form>
-          <form method="get" action="/" class="inline-form">
-            <select name="week" onchange="window.location=this.value">
-              {% for w in weeks %}
-                <option value="{{ url_for('week_view', week_id=w['id']) }}" {% if w['id'] == week['id'] %}selected{% endif %}>
-                  {{ w['week_date'] }}
-                </option>
-              {% endfor %}
-            </select>
-          </form>
           <a class="link" href="{{ url_for('next_up', week_id=week['id']) }}">Next 4</a>
           <a class="link" href="{{ url_for('players') }}">Players</a>
           <a class="link" href="{{ url_for('logout') }}">Logout</a>
