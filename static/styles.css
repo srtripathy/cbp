@@ -72,29 +72,6 @@ body {
   border: 1px solid var(--border);
 }
 
-.game-status-row {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(100px, 1fr));
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.game-status {
-  background: #f7fbf9;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 8px 10px;
-  font-size: 0.92rem;
-  color: var(--muted);
-}
-
-.game-status.full {
-  background: #e7f3ee;
-  border-color: var(--accent);
-  color: var(--accent);
-  font-weight: 700;
-}
-
 .table-wrap {
   overflow-x: auto;
 }
@@ -154,8 +131,11 @@ body {
 }
 
 .toggle.disabled {
-  opacity: 0.4;
+  opacity: 1;
   cursor: not-allowed;
+  background: #efe8d6;
+  border-color: #d0bf91;
+  color: #8e7b4b;
 }
 
 button.primary {
@@ -275,10 +255,6 @@ textarea {
 }
 
 @media (max-width: 720px) {
-  .game-status-row {
-    grid-template-columns: repeat(2, minmax(100px, 1fr));
-  }
-
   .sheet {
     min-width: 640px;
   }

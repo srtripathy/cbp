@@ -34,14 +34,6 @@
       </header>
 
       <section class="card">
-        <div class="game-status-row">
-          {% for game in games %}
-            {% set current_count = game_counts.get(game, 0) %}
-            <div class="game-status" id="status-{{ game }}">
-              G{{ game }}: <span>{{ current_count }}/{{ players_per_game }}</span>
-            </div>
-          {% endfor %}
-        </div>
         <div class="table-wrap">
           <table class="sheet">
             <thead>
@@ -91,12 +83,6 @@
       const playersPerGame = {{ players_per_game }};
 
       function updateGameAvailability(gameNo, selectedCount) {
-        const status = document.getElementById(`status-${gameNo}`);
-        if (status) {
-          status.innerHTML = `G${gameNo}: <span>${selectedCount}/${playersPerGame}</span>`;
-          status.classList.toggle("full", selectedCount >= playersPerGame);
-        }
-
         document.querySelectorAll(`.toggle[data-game="${gameNo}"]`).forEach((gameBtn) => {
           const isPlayed = gameBtn.dataset.played === "1";
           const shouldDisable = selectedCount >= playersPerGame && !isPlayed;
@@ -134,7 +120,6 @@
           if (!res.ok) {
             if (data.limit_reached) {
               updateGameAvailability(gameNo, playersPerGame);
-              window.alert(data.error);
             }
             return;
           }
