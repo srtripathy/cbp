@@ -36,6 +36,7 @@ from sqlalchemy import (
 APP_DIR = Path(__file__).resolve().parent
 DEFAULT_PLAYERS: list[str] = []
 GAMES_PER_WEEK = 16
+PLAYERS_PER_GAME = 4
 
 CLUB_NAME = os.environ.get("CLUB_NAME", "Badminton Week Sheet")
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
@@ -304,6 +305,10 @@ def week_view(week_id: int):
 
     played_map = {(r[0], r[1]): r[2] for r in rows}
     player_totals = build_player_totals(rows, players)
+    game_counts: Dict[int, int] = {game_no: 0 for game_no in range(1, GAMES_PER_WEEK + 1)}
+    for _player_id, game_no, played in rows:
+        if played:
+            game_counts[int(game_no)] += 1
     weeks = get_weeks()
 
     return render_template(
@@ -315,6 +320,8 @@ def week_view(week_id: int):
         games=range(1, GAMES_PER_WEEK + 1),
         played_map=played_map,
         player_totals=player_totals,
+        game_counts=game_counts,
+        players_per_game=PLAYERS_PER_GAME,
     )
 
 
@@ -493,6 +500,28 @@ def toggle():
             return jsonify({"ok": False}), 404
 
         new_value = not row[0]
+        if new_value:
+            selected_count = conn.execute(
+                select(func.count())
+                .select_from(week_player_games_table)
+                .where(
+                    (week_player_games_table.c.week_id == week_id)
+                    & (week_player_games_table.c.game_no == game_no)
+                    & (week_player_games_table.c.played.is_(True))
+                )
+            ).scalar_one()
+            if int(selected_count) >= PLAYERS_PER_GAME:
+                return (
+                    jsonify(
+                        {
+                            "ok": False,
+                            "error": f"Game {game_no} already has {PLAYERS_PER_GAME} players selected.",
+                            "limit_reached": True,
+                        }
+                    ),
+                    409,
+                )
+
         conn.execute(
             update(week_player_games_table)
             .where(
@@ -502,8 +531,24 @@ def toggle():
             )
             .values(played=new_value)
         )
+        selected_count = conn.execute(
+            select(func.count())
+            .select_from(week_player_games_table)
+            .where(
+                (week_player_games_table.c.week_id == week_id)
+                & (week_player_games_table.c.game_no == game_no)
+                & (week_player_games_table.c.played.is_(True))
+            )
+        ).scalar_one()
 
-    return jsonify({"ok": True, "played": 1 if new_value else 0})
+    return jsonify(
+        {
+            "ok": True,
+            "played": 1 if new_value else 0,
+            "game_count": int(selected_count),
+            "players_per_game": PLAYERS_PER_GAME,
+        }
+    )
 
 
 if __name__ == "__main__":

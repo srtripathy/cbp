@@ -34,6 +34,14 @@
       </header>
 
       <section class="card">
+        <div class="game-status-row">
+          {% for game in games %}
+            {% set current_count = game_counts.get(game, 0) %}
+            <div class="game-status" id="status-{{ game }}">
+              G{{ game }}: <span>{{ current_count }}/{{ players_per_game }}</span>
+            </div>
+          {% endfor %}
+        </div>
         <div class="table-wrap">
           <table class="sheet">
             <thead>
@@ -60,6 +68,7 @@
                         data-week="{{ week['id'] }}"
                         data-player="{{ player['id'] }}"
                         data-game="{{ game }}"
+                        data-played="{{ 1 if played else 0 }}"
                         aria-label="Toggle {{ player['name'] }} for game {{ game }}"
                       >
                         {{ '✓' if played else '' }}
@@ -79,9 +88,33 @@
     </div>
 
     <script>
+      const playersPerGame = {{ players_per_game }};
+
+      function updateGameAvailability(gameNo, selectedCount) {
+        const status = document.getElementById(`status-${gameNo}`);
+        if (status) {
+          status.innerHTML = `G${gameNo}: <span>${selectedCount}/${playersPerGame}</span>`;
+          status.classList.toggle("full", selectedCount >= playersPerGame);
+        }
+
+        document.querySelectorAll(`.toggle[data-game="${gameNo}"]`).forEach((gameBtn) => {
+          const isPlayed = gameBtn.dataset.played === "1";
+          const shouldDisable = selectedCount >= playersPerGame && !isPlayed;
+          gameBtn.disabled = shouldDisable;
+          gameBtn.classList.toggle("disabled", shouldDisable);
+        });
+      }
+
+      const initialGameCounts = {{ game_counts|tojson }};
+      Object.entries(initialGameCounts).forEach(([gameNo, count]) => {
+        updateGameAvailability(gameNo, Number(count));
+      });
+
       document.querySelectorAll(".toggle").forEach((btn) => {
         btn.addEventListener("click", async (event) => {
           event.preventDefault();
+          if (btn.disabled) return;
+
           const weekId = btn.dataset.week;
           const playerId = btn.dataset.player;
           const gameNo = btn.dataset.game;
@@ -97,13 +130,21 @@
             }),
           });
 
-          if (!res.ok) return;
           const data = await res.json();
+          if (!res.ok) {
+            if (data.limit_reached) {
+              updateGameAvailability(gameNo, playersPerGame);
+              window.alert(data.error);
+            }
+            return;
+          }
+
           if (data.ok) {
             if (data.played === 1) {
               btn.classList.remove("off");
               btn.classList.add("on");
               btn.textContent = "✓";
+              btn.dataset.played = "1";
               if (totalCell) {
                 const next = Number(totalCell.textContent || "0") + 1;
                 totalCell.textContent = String(next);
@@ -112,11 +153,13 @@
               btn.classList.remove("on");
               btn.classList.add("off");
               btn.textContent = "";
+              btn.dataset.played = "0";
               if (totalCell) {
                 const next = Math.max(0, Number(totalCell.textContent || "0") - 1);
                 totalCell.textContent = String(next);
               }
             }
+            updateGameAvailability(gameNo, Number(data.game_count));
           }
         });
       });
