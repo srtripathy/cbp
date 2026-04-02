@@ -71,6 +71,14 @@ week_player_games_table = Table(
     Column("played", Boolean, nullable=False, default=False),
 )
 
+next_up_slots_table = Table(
+    "next_up_slots",
+    metadata,
+    Column("week_id", Integer, ForeignKey("weeks.id", ondelete="CASCADE"), primary_key=True),
+    Column("slot_no", Integer, primary_key=True),
+    Column("player_id", Integer, ForeignKey("players.id", ondelete="CASCADE"), nullable=False),
+)
+
 
 def build_engine():
     db_url = os.environ.get("DATABASE_URL")
@@ -165,6 +173,56 @@ def get_weeks() -> List[Dict[str, Any]]:
         return [row_to_dict(r) for r in rows]
 
 
+def build_player_totals(
+    rows: List[Tuple[int, int, bool]], players: List[Dict[str, Any]]
+) -> Dict[int, int]:
+    player_totals: Dict[int, int] = {int(p["id"]): 0 for p in players}
+    for player_id, _game_no, played in rows:
+        if played:
+            player_totals[int(player_id)] += 1
+    return player_totals
+
+
+def suggested_next_up(
+    players: List[Dict[str, Any]], player_totals: Dict[int, int]
+) -> List[Dict[str, Any]]:
+    if len(players) <= 4:
+        return players
+
+    ranked_players = sorted(
+        players,
+        key=lambda player: (
+            player_totals.get(int(player["id"]), 0),
+            int(player["sort_order"]),
+            player["name"].lower(),
+        ),
+    )
+    return ranked_players[:4]
+
+
+def saved_next_up_for_week(week_id: int) -> List[int]:
+    with engine.begin() as conn:
+        rows = conn.execute(
+            select(next_up_slots_table.c.player_id)
+            .where(next_up_slots_table.c.week_id == week_id)
+            .order_by(next_up_slots_table.c.slot_no.asc())
+        ).fetchall()
+    return [int(row[0]) for row in rows]
+
+
+def replace_next_up_for_week(week_id: int, player_ids: List[int]) -> None:
+    with engine.begin() as conn:
+        conn.execute(delete(next_up_slots_table).where(next_up_slots_table.c.week_id == week_id))
+        if player_ids:
+            conn.execute(
+                insert(next_up_slots_table),
+                [
+                    {"week_id": week_id, "slot_no": slot_no, "player_id": player_id}
+                    for slot_no, player_id in enumerate(player_ids, start=1)
+                ],
+            )
+
+
 
 def login_required(fn):
     @wraps(fn)
@@ -245,10 +303,7 @@ def week_view(week_id: int):
         ).fetchall()
 
     played_map = {(r[0], r[1]): r[2] for r in rows}
-    player_totals: Dict[int, int] = {int(p["id"]): 0 for p in players}
-    for player_id, _game_no, played in rows:
-        if played:
-            player_totals[int(player_id)] += 1
+    player_totals = build_player_totals(rows, players)
     weeks = get_weeks()
 
     return render_template(
@@ -260,6 +315,79 @@ def week_view(week_id: int):
         games=range(1, GAMES_PER_WEEK + 1),
         played_map=played_map,
         player_totals=player_totals,
+    )
+
+
+@app.route("/next-up/<int:week_id>", methods=["GET", "POST"])
+@login_required
+def next_up(week_id: int):
+    init_db()
+
+    with engine.begin() as conn:
+        week_row = conn.execute(select(weeks_table).where(weeks_table.c.id == week_id)).first()
+        week = row_to_dict(week_row)
+        if not week:
+            return redirect(url_for("index"))
+
+        players_rows = conn.execute(
+            select(players_table).order_by(players_table.c.sort_order.asc())
+        ).fetchall()
+        players = [row_to_dict(r) for r in players_rows]
+
+        game_rows = conn.execute(
+            select(
+                week_player_games_table.c.player_id,
+                week_player_games_table.c.game_no,
+                week_player_games_table.c.played,
+            ).where(week_player_games_table.c.week_id == week_id)
+        ).fetchall()
+
+    player_totals = build_player_totals(game_rows, players)
+    suggested_players = suggested_next_up(players, player_totals)
+    player_by_id = {int(player["id"]): player for player in players}
+
+    if request.method == "POST":
+        action = request.form.get("action", "save")
+        if action == "reset":
+            replace_next_up_for_week(week_id, [])
+            return redirect(url_for("next_up", week_id=week_id))
+
+        selected_ids: List[int] = []
+        for slot_no in range(1, 5):
+            raw_value = request.form.get(f"slot_{slot_no}", "").strip()
+            if not raw_value:
+                continue
+            try:
+                player_id = int(raw_value)
+            except ValueError:
+                continue
+            if player_id not in player_by_id or player_id in selected_ids:
+                continue
+            selected_ids.append(player_id)
+
+        replace_next_up_for_week(week_id, selected_ids)
+        return redirect(url_for("next_up", week_id=week_id))
+
+    saved_ids = saved_next_up_for_week(week_id)
+    if saved_ids:
+        current_players = [player_by_id[player_id] for player_id in saved_ids if player_id in player_by_id]
+    else:
+        current_players = suggested_players
+
+    current_slots: List[Dict[str, Any] | None] = list(current_players[:4])
+    while len(current_slots) < 4:
+        current_slots.append(None)
+
+    weeks = get_weeks()
+    return render_template(
+        "next_up.html",
+        club_name=CLUB_NAME,
+        week=week,
+        weeks=weeks,
+        players=players,
+        player_totals=player_totals,
+        suggested_players=suggested_players,
+        current_slots=current_slots,
     )
 
 
@@ -284,6 +412,7 @@ def players():
         if unique_names:
             with engine.begin() as conn:
                 # Reset players and games for all weeks
+                conn.execute(delete(next_up_slots_table))
                 conn.execute(delete(week_player_games_table))
                 conn.execute(delete(players_table))
 

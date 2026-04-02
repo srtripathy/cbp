@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ club_name }} - Next 4</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="topbar">
+        <div>
+          <h1>{{ club_name }}</h1>
+          <p class="subtitle">Next 4 for week of {{ week['week_date'] }}</p>
+        </div>
+        <div class="topbar-actions">
+          <a class="link" href="{{ url_for('week_view', week_id=week['id']) }}">Back to week</a>
+          <a class="link" href="{{ url_for('players') }}">Players</a>
+          <a class="link" href="{{ url_for('logout') }}">Logout</a>
+        </div>
+      </header>
+
+      <section class="card stack">
+        <p class="note">
+          When more than 4 players are available, we suggest the 4 with the fewest games played so far this week.
+          You can edit the current list below and save it.
+        </p>
+
+        <div class="next-up-panels">
+          <div class="panel">
+            <h2>Current Next 4</h2>
+            <form method="post" class="stack">
+              {% for slot in range(1, 5) %}
+                <label>
+                  Slot {{ slot }}
+                  <select name="slot_{{ slot }}">
+                    <option value="">Select player</option>
+                    {% for player in players %}
+                      {% set current = current_slots[slot - 1] %}
+                      <option value="{{ player['id'] }}" {% if current and current['id'] == player['id'] %}selected{% endif %}>
+                        {{ player['name'] }} ({{ player_totals.get(player['id'], 0) }})
+                      </option>
+                    {% endfor %}
+                  </select>
+                </label>
+              {% endfor %}
+              <div class="actions-row">
+                <button type="submit" class="primary">Save Next 4</button>
+                <button type="submit" class="secondary" name="action" value="reset">Use Suggested List</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="panel">
+            <h2>Suggested By Least Played</h2>
+            <ol class="next-up-list">
+              {% for player in suggested_players %}
+                <li>
+                  <span>{{ player['name'] }}</span>
+                  <strong>{{ player_totals.get(player['id'], 0) }} games</strong>
+                </li>
+              {% endfor %}
+            </ol>
+            {% if not suggested_players %}
+              <p class="note">Add players first to generate a next-up list.</p>
+            {% endif %}
+          </div>
+        </div>
+      </section>
+    </div>
+  </body>
+</html>
